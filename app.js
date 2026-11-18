@@ -1839,7 +1839,7 @@
     const fab = document.getElementById("fab");
     if (fab) {
       fab.addEventListener("click", () => {
-        document.getElementById("contact").scrollIntoView({ behavior: "smooth" });
+        if (window.openAssistant) window.openAssistant();
       });
     }
 
@@ -1848,6 +1848,140 @@
         window.scrollTo({ top: 0, behavior: "smooth" });
       });
     });
+  }
+
+  /* ---------------- chat assistant ---------------- */
+
+  const CHAT_ENDPOINT = "https://portfolio-chat-api-abmh5v.freebuff.site/";
+  const CHAT_SUGGESTIONS = [
+    "ສະຫຼຸບປະສົບການວຽກໃຫ້ຟັງໜ່ອຍ",
+    "ມີໂຄງການຫຍັງແດ່?",
+    "ມີທັກສະຫຍັງແດ່?",
+    "ຕິດຕໍ່ໄດ້ທາງໃດ?",
+  ];
+  const CHAT_REPLY = {
+    offline:
+      "ຂໍອະໄພ AI ຍັງບໍ່ໄດ້ເປີດໃຊ້ງານ. ຕິດຕໍ່ໄດ້ທີ່ hongkham.svnv@outlook.com ຫຼື +856 20 5885 5817",
+    limit: "ຖາມຫຼາຍເກີນໄປໃນໄລຍະນີ້ ລອງໃໝ່ໃນສອງສາມນາທີອີກເທື່ອ.",
+    fail: "ຂໍອະໄພ ເຊື່ອມຕໍ່ AI ບໍ່ສຳເລັດ. ລອງອີກເທື່ອໜຶ່ງ ຫຼື ສົ່ງອີເມວມາກໍ່ໄດ້.",
+    welcome:
+      "ສະບາຍດີ! ຂ້ອຍເປັນຜູ້ຊ່ວຍ AI ຂອງຫົງຄຳ. ຖາມເລື່ອງປະສົບການ, ໂຄງການ, ທັກສະ ຫຼື ຊ່ອງທາງຕິດຕໍ່ໄດ້ເລີຍ.",
+  };
+
+  function initChat() {
+    const dock = document.getElementById("chat");
+    const log = document.getElementById("chat-log");
+    const form = document.getElementById("chat-form");
+    const input = document.getElementById("chat-input");
+    const suggestBar = document.getElementById("chat-suggest");
+    const closeButton = document.getElementById("chat-close");
+    if (!dock || !log || !form || !input) return;
+
+    const history = [];
+    let busy = false;
+    let greeted = false;
+
+    function addBubble(role, text) {
+      const wrap = document.createElement("div");
+      wrap.className = "chat-msg " + (role === "user" ? "is-user" : "is-ai");
+      const who = document.createElement("span");
+      who.className = "chat-msg-who";
+      who.textContent = role === "user" ? "ທ່ານ" : "AI";
+      const body = document.createElement("p");
+      body.textContent = text;
+      wrap.append(who, body);
+      log.append(wrap);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function addTyping() {
+      const wrap = document.createElement("div");
+      wrap.className = "chat-msg is-ai chat-typing";
+      wrap.innerHTML = "<span></span><span></span><span></span>";
+      log.append(wrap);
+      log.scrollTop = log.scrollHeight;
+      return wrap;
+    }
+
+    function setBusy(value) {
+      busy = value;
+      const button = form.querySelector("button");
+      if (button) button.disabled = value;
+      dock.classList.toggle("is-busy", value);
+    }
+
+    async function ask(text) {
+      const value = String(text || "").trim();
+      if (!value || busy) return;
+      addBubble("user", value);
+      history.push({ role: "user", content: value.slice(0, 800) });
+      if (suggestBar) suggestBar.classList.add("is-hidden");
+      input.value = "";
+      setBusy(true);
+      const typing = addTyping();
+      let reply = CHAT_REPLY.fail;
+      let ok = false;
+      try {
+        const response = await fetch(CHAT_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: history.slice(-10) }),
+        });
+        const data = await response.json().catch(() => null);
+        if (response.ok && data && typeof data.answer === "string") {
+          reply = data.answer;
+          ok = true;
+        } else if (response.status === 429) {
+          reply = CHAT_REPLY.limit;
+        } else if (response.status === 503) {
+          reply = CHAT_REPLY.offline;
+        }
+      } catch (error) {
+        reply = CHAT_REPLY.fail;
+      }
+      typing.remove();
+      addBubble("assistant", reply);
+      if (ok) history.push({ role: "assistant", content: reply });
+      setBusy(false);
+    }
+
+    function openChat() {
+      dock.classList.add("is-open");
+      dock.setAttribute("aria-hidden", "false");
+      if (!greeted) {
+        greeted = true;
+        addBubble("assistant", CHAT_REPLY.welcome);
+      }
+      window.setTimeout(() => input.focus({ preventScroll: true }), 180);
+    }
+
+    function closeChat() {
+      dock.classList.remove("is-open");
+      dock.setAttribute("aria-hidden", "true");
+    }
+
+    if (suggestBar) {
+      suggestBar.innerHTML = CHAT_SUGGESTIONS.map(
+        (question) => '<button class="chat-chip" type="button">' + esc(question) + "</button>",
+      ).join("");
+      suggestBar.addEventListener("click", (event) => {
+        const chip = event.target.closest(".chat-chip");
+        if (chip) ask(chip.textContent);
+      });
+    }
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      ask(input.value);
+    });
+
+    if (closeButton) closeButton.addEventListener("click", closeChat);
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && dock.classList.contains("is-open")) closeChat();
+    });
+
+    window.openAssistant = openChat;
   }
 
   function init() {
@@ -1868,6 +2002,7 @@
     initForm();
     initFaq();
     initEvents();
+    initChat();
   }
 
   if (document.readyState === "loading") {

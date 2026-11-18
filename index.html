@@ -25,7 +25,7 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;500;600;700;800&family=Noto+Sans+Lao+Looped:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=67" />
+    <link rel="stylesheet" href="styles.css?v=68" />
   </head>
   <body>
     <aside class="it-rail it-rail-left" aria-hidden="true">
@@ -581,7 +581,32 @@
       <div class="cert-viewer-panel glass" id="cert-viewer-content"></div>
     </div>
 
+    <section class="chat" id="chat" aria-hidden="true" aria-label="AI ຜູ້ຊ່ວຍ">
+      <div class="chat-panel" role="dialog" aria-label="AI ຜູ້ຊ່ວຍ">
+        <div class="chat-head">
+          <span class="chat-avatar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4M8 4h8"/><rect x="3" y="8" width="18" height="12" rx="4"/><path d="M8.5 13.5h.01M15.5 13.5h.01M9 17h6"/></svg>
+          </span>
+          <div class="chat-who">
+            <b>AI ຜູ້ຊ່ວຍ</b>
+            <span><i class="chat-live"></i> ຕອບຄຳຖາມກ່ຽວກັບປະສົບການ ແລະ ຜົນງານ</span>
+          </div>
+          <button class="chat-x" type="button" id="chat-close" aria-label="ປິດ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="chat-log" id="chat-log" role="log" aria-live="polite"></div>
+        <div class="chat-suggest" id="chat-suggest"></div>
+        <form class="chat-form" id="chat-form" autocomplete="off">
+          <input id="chat-input" type="text" maxlength="500" placeholder="ພິມຄຳຖາມຂອງທ່ານ..." aria-label="ພິມຄຳຖາມ" />
+          <button type="submit" aria-label="ສົ່ງຄຳຖາມ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
+          </button>
+        </form>
+      </div>
+    </section>
+
     <script src="data.js?v=59"></script>
-    <script src="app.js?v=52"></script>
+    <script src="app.js?v=53"></script>
   </body>
 </html>
