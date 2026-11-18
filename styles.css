@@ -1063,29 +1063,30 @@ ol {
 }
 
 /* text intro: phones and tablets keep the plain centered block */
-.about-intro {
+.text-intro {
   display: grid;
   gap: 14px;
 }
 
-.about-intro p {
+.text-intro p {
   margin-top: 0;
 }
 
 /* Desktop browser only — the intro spans the card width in two balanced columns */
 @media (min-width: 1200px) {
-  #about .section-head {
+  #about .section-head,
+  #experience .section-head {
     max-width: none;
     margin-bottom: 48px;
   }
 
-  #about .about-intro {
+  .text-intro {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px 56px;
     text-align: left;
   }
 
-  #about .about-intro p {
+  .text-intro p {
     font-size: 14.5px;
     line-height: 2.05;
     text-wrap: pretty;
@@ -1094,13 +1095,13 @@ ol {
 
 /* Desktop browser only — hover highlight drawn by a pseudo-element so the grid never shifts */
 @media (min-width: 1200px) and (hover: hover) and (pointer: fine) {
-  #about .about-intro p {
+  .text-intro p {
     position: relative;
     isolation: isolate;
     transition: color 0.24s ease;
   }
 
-  #about .about-intro p::before {
+  .text-intro p::before {
     content: "";
     position: absolute;
     inset: -8px -12px;
@@ -1112,11 +1113,11 @@ ol {
     pointer-events: none;
   }
 
-  #about .about-intro p:hover {
+  .text-intro p:hover {
     color: hsl(0 0% 96%);
   }
 
-  #about .about-intro p:hover::before {
+  .text-intro p:hover::before {
     background: hsl(217 91% 60% / 0.09);
     box-shadow: inset 0 0 0 1px hsl(217 91% 65% / 0.22);
   }
