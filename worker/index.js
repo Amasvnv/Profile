@@ -9,6 +9,11 @@
  * Optional vars
  *   AI_BASE  - OpenAI-compatible base URL (default: https://freebuff.com/api/v1/paid)
  *   AI_MODEL - model id (default: deepseek-v4.1-flash)
+ *
+ * Contact form: POST /contact
+ *   RESEND_KEY   - secret holding the Resend API key (sites_set_secret)
+ *   CONTACT_TO   - optional recipient (default hongkham.svnv@outlook.com)
+ *   CONTACT_FROM - optional verified sender (default Portfolio <onboarding@resend.dev>)
  */
 import { KB } from "./kb.js";
 
@@ -141,6 +146,144 @@ async function translateToThai(text, base, model, key) {
   }
 }
 
+/* ---------- contact form ---------- */
+
+const CONTACT_WINDOW_MS = 10 * 60 * 1000;
+const CONTACT_MAX = 5;
+const contactHits = new Map();
+
+const CONTACT_TO_DEFAULT = "hongkham.svnv@outlook.com";
+const CONTACT_FROM_DEFAULT = "Portfolio <onboarding@resend.dev>";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function contactLimited(ip) {
+  const now = Date.now();
+  const entry = contactHits.get(ip);
+  if (!entry || now - entry.start > CONTACT_WINDOW_MS) {
+    contactHits.set(ip, { start: now, count: 1 });
+    if (contactHits.size > 500) {
+      for (const [key, value] of contactHits) {
+        if (now - value.start > CONTACT_WINDOW_MS) contactHits.delete(key);
+      }
+    }
+    return false;
+  }
+  entry.count += 1;
+  return entry.count > CONTACT_MAX;
+}
+
+function field(value, max) {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
+function escapeHtml(value) {
+  return String(value).replace(
+    /[&<>"']/g,
+    (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch],
+  );
+}
+
+async function handleContact(request, env, origin) {
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  if (contactLimited(ip)) {
+    return json({ error: "rate_limited" }, 429, origin);
+  }
+
+  let payload;
+  try {
+    payload = await request.json();
+  } catch {
+    return json({ error: "bad_json" }, 400, origin);
+  }
+  if (!payload || typeof payload !== "object") {
+    return json({ error: "bad_json" }, 400, origin);
+  }
+
+  /* Bots fill the hidden field or submit within a second: answer OK so they stop. */
+  if (field(payload.company, 80) || Number(payload.elapsedMs) < 2000) {
+    return json({ ok: true }, 200, origin);
+  }
+
+  const name = field(payload.name, 80);
+  const email = field(payload.email, 120);
+  const phone = field(payload.phone, 40);
+  const subject = field(payload.subject, 140);
+  const message = field(payload.message, 2000);
+  const channel = field(payload.channel, 40);
+  const service = field(payload.service, 80);
+  const budget = field(payload.budget, 40);
+  const address = field(payload.address, 160);
+
+  if (name.length < 2) return json({ error: "bad_name" }, 400, origin);
+  if (!EMAIL_RE.test(email)) return json({ error: "bad_email" }, 400, origin);
+  if (subject.length < 2) return json({ error: "bad_subject" }, 400, origin);
+  if (message.length < 10) return json({ error: "bad_message" }, 400, origin);
+
+  if (!env.RESEND_KEY) {
+    return json({ error: "mail_not_configured" }, 503, origin);
+  }
+
+  const rows = [
+    ["Name", name],
+    ["Email", email],
+    ["Phone", phone],
+    ["Preferred channel", channel],
+    ["Service", service],
+    ["Budget", budget],
+    ["Address", address],
+  ].filter(([, value]) => value);
+
+  const html = [
+    '<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.7;color:#111">',
+    '<h2 style="margin:0 0 14px;font-size:17px">New message from the portfolio site</h2>',
+    '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse">',
+    ...rows.map(
+      ([label, value]) =>
+        `<tr><td style="padding:2px 14px 2px 0;color:#666;vertical-align:top">${escapeHtml(label)}</td><td style="padding:2px 0">${escapeHtml(value)}</td></tr>`,
+    ),
+    "</table>",
+    '<p style="margin:18px 0 6px;color:#666">Message</p>',
+    `<div style="white-space:pre-wrap;padding:12px 14px;background:#f4f4f7;border-radius:8px">${escapeHtml(message)}</div>`,
+    '<p style="margin:18px 0 0;color:#999;font-size:12px">Sent from the contact form. Reply to this email to answer the visitor directly.</p>',
+    "</div>",
+  ].join("");
+
+  const text = [
+    "New message from the portfolio site",
+    "",
+    ...rows.map(([label, value]) => `${label}: ${value}`),
+    "",
+    message,
+  ].join("\n");
+
+  let sent;
+  try {
+    sent = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.RESEND_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: env.CONTACT_FROM || CONTACT_FROM_DEFAULT,
+        to: [env.CONTACT_TO || CONTACT_TO_DEFAULT],
+        reply_to: email,
+        subject: `[Portfolio] ${subject}`,
+        html,
+        text,
+      }),
+    });
+  } catch {
+    return json({ error: "mail_unreachable" }, 502, origin);
+  }
+
+  if (!sent.ok) {
+    return json({ error: "mail_failed", status: sent.status }, 502, origin);
+  }
+
+  return json({ ok: true }, 200, origin);
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
@@ -155,9 +298,20 @@ export default {
 
     const key = env.FREEBUFF_API_KEY || env.AI_KEY;
     const url = new URL(request.url);
-    if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
+    const path = url.pathname.replace(/\/+$/, "");
+
+    if (request.method === "POST" && path.endsWith("/contact")) {
+      return handleContact(request, env, origin);
+    }
+
+    if (request.method === "GET" && (path === "" || path === "/health")) {
       return json(
-        { ok: true, model: env.AI_MODEL || DEFAULT_MODEL, hasKey: Boolean(key) },
+        {
+          ok: true,
+          model: env.AI_MODEL || DEFAULT_MODEL,
+          hasKey: Boolean(key),
+          hasMailKey: Boolean(env.RESEND_KEY),
+        },
         200,
         origin,
       );

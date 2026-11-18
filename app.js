@@ -1740,9 +1740,15 @@
   function initForm() {
     const form = document.getElementById("contact-form");
     if (!form) return;
+
     const message = form.querySelector("#message");
     const counter = form.querySelector("#counter");
     const success = document.getElementById("form-success");
+    const failure = document.getElementById("form-error");
+    const failureMail = document.getElementById("form-error-mail");
+    const submit = form.querySelector('button[type="submit"]');
+    const startedAt = Date.now();
+    let sending = false;
 
     if (message && counter) {
       const update = () => {
@@ -1752,15 +1758,71 @@
       update();
     }
 
-    form.addEventListener("submit", (event) => {
+    const mailtoHref = (data) => {
+      const subject = data.subject || "Portfolio contact";
+      const body = [
+        data.name ? `Name: ${data.name}` : "",
+        data.email ? `Email: ${data.email}` : "",
+        data.phone ? `Phone: ${data.phone}` : "",
+        data.message ? `\n${data.message}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+      return `mailto:hongkham.svnv@outlook.com?subject=${encodeURIComponent(
+        subject,
+      )}&body=${encodeURIComponent(body)}`;
+    };
+
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (sending) return;
       if (!form.reportValidity()) return;
+
+      const data = Object.fromEntries(new FormData(form).entries());
+      if (failure) failure.classList.remove("show");
+
+      sending = true;
+      form.classList.add("is-sending");
+      if (submit) {
+        submit.disabled = true;
+        submit.classList.add("is-loading");
+      }
+
+      let delivered = false;
+      try {
+        const response = await fetch(CONTACT_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(Object.assign({}, data, { elapsedMs: Date.now() - startedAt })),
+        });
+        const payload = await response.json().catch(() => null);
+        delivered = response.ok && payload !== null && payload.ok === true;
+      } catch (error) {
+        delivered = false;
+      }
+
+      sending = false;
+      form.classList.remove("is-sending");
+      if (submit) {
+        submit.disabled = false;
+        submit.classList.remove("is-loading");
+      }
+
+      if (!delivered) {
+        if (failureMail) failureMail.href = mailtoHref(data);
+        if (failure) {
+          failure.classList.add("show");
+          failure.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        return;
+      }
+
       form.reset();
       if (counter) counter.textContent = "0/2000";
       if (success) {
         success.classList.add("show");
         success.scrollIntoView({ behavior: "smooth", block: "center" });
-        setTimeout(() => success.classList.remove("show"), 8000);
+        setTimeout(() => success.classList.remove("show"), 9000);
       }
     });
   }
@@ -1853,6 +1915,7 @@
   /* ---------------- chat assistant ---------------- */
 
   const CHAT_ENDPOINT = "https://portfolio-chat-api-abmh5v.freebuff.site/";
+  const CONTACT_ENDPOINT = CHAT_ENDPOINT.replace(/\/+$/, "") + "/contact";
   const CHAT_SUGGESTIONS = [
     "ສະຫຼຸບປະສົບການວຽກໃຫ້ຟັງໜ່ອຍ",
     "ມີໂຄງການຫຍັງແດ່?",
@@ -1984,6 +2047,50 @@
     window.openAssistant = openChat;
   }
 
+  /* ---------------- fab label typewriter ---------------- */
+
+  function initFabTyper() {
+    const el = document.querySelector(".fab-typer-text");
+    if (!el) return;
+
+    const full = (el.textContent || "").trim();
+    if (!full) return;
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion || typeof Intl === "undefined" || !Intl.Segmenter) return;
+
+    /* Lao vowels and tone marks belong to their consonant, so split by
+       grapheme cluster so each cluster animates in one piece. */
+    const segmenter = new Intl.Segmenter("lo", { granularity: "grapheme" });
+    const glyphs = Array.from(segmenter.segment(full), (part) => part.segment);
+
+    const STAGGER_MS = 70;
+    const GLYPH_MS = 500;
+    const HOLD_MS = 2400;
+    const GAP_MS = 300;
+
+    const paint = () => {
+      el.textContent = "";
+      glyphs.forEach((glyph, index) => {
+        const span = document.createElement("span");
+        span.className = "fab-glyph";
+        span.style.setProperty("--i", String(index));
+        span.textContent = glyph;
+        el.appendChild(span);
+      });
+      window.setTimeout(() => {
+        el.classList.add("is-out");
+        window.setTimeout(() => {
+          el.classList.remove("is-out");
+          paint();
+        }, GAP_MS);
+      }, glyphs.length * STAGGER_MS + GLYPH_MS + HOLD_MS);
+    };
+
+    el.textContent = "";
+    window.setTimeout(paint, 600);
+  }
+
   function init() {
     initParticles();
     initStatCounters();
@@ -2003,6 +2110,7 @@
     initFaq();
     initEvents();
     initChat();
+    initFabTyper();
   }
 
   if (document.readyState === "loading") {
