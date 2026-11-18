@@ -1062,6 +1062,35 @@ ol {
   color: hsl(217 91% 70%);
 }
 
+/* text intro: spans the full card width, two balanced columns on desktop */
+.about-intro {
+  display: grid;
+  gap: 14px;
+}
+
+.about-intro p {
+  margin-top: 0;
+}
+
+@media (min-width: 1024px) {
+  #about .section-head {
+    max-width: none;
+    margin-bottom: 48px;
+  }
+
+  #about .about-intro {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 56px;
+    text-align: left;
+  }
+
+  #about .about-intro p {
+    font-size: 14.5px;
+    line-height: 2.05;
+    text-wrap: pretty;
+  }
+}
+
 /* full-width card: split into a readable text column + the highlight list */
 @media (min-width: 1024px) {
   .about-card {
