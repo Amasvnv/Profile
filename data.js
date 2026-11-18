@@ -505,8 +505,8 @@ const SKILL_GROUPS = [
 ];
 
 const FILTERS = [
-  { id: "all", label: "ທັງໝົດ", count: 27 },
-  { id: "db", label: "ລະບົບຖານຂໍ້ມູນ", count: 9 },
+  { id: "all", label: "ທັງໝົດ", count: 28 },
+  { id: "db", label: "ລະບົບຖານຂໍ້ມູນ", count: 10 },
   { id: "net", label: "ເຄືອຂ່າຍ", count: 4 },
   { id: "train", label: "ການຝຶກອົບຮົມ", count: 1 },
   { id: "design", label: "ການອອກແບບ", count: 1 },
@@ -1316,6 +1316,27 @@ const PROJECTS = [
     impact:
       "ຫຼຸດເວລາຄົ້ນຫາຂໍ້ມູນພາຍໃນອົງກອນ ແລະ ຫຼຸດຄຳຖາມທີ່ຕ້ອງຖາມຜູ້ຊ່ຽວຊານຊ້ຳໆ",
     stats: [{ value: "80%", label: "ເວລາຄົ້ນຫາຫຼຸດລົງ" }, { value: "5K+", label: "ເອກະສານ" }],
+  },
+  {
+    id: "etax-invoice",
+    title: "E-Tax Invoice ລະບົບຈັດການ ເສຍອາກອນ",
+    period: "2026-ປັດຈຸບັນ",
+    status: "ນຳໃຊ້ຈິງ",
+    category: "db",
+    location: "ວຽງຈັນ, ລາວ",
+    image: "assets/project-e-tax-invoice.webp",
+    description:
+      "ພັດທະນາແດັດຊະບອດຈັດການອາກອນ ແລະ ໃບກຳກັບພາສີແບບດິຈິຕອນ ສຳລັບອົງກອນ ພ້ອມລາຍງານລາຍຮັບພາສີແບບ real-time",
+    features: [
+      "ແດັດຊະບອດສະຫຼຸບລາຍຮັບພາສີ ແລະ ຈຳນວນຜູ້ເສຍອາກອນ",
+      "ຈັດການໃບກຳກັບພາສີ ແລະ ການຍື່ນແຈ້ງແບບ e-Filing",
+      "ຕິດຕາມສະຖານະການຊຳລະ ແລະ ລາຍການຄ້າງຊຳລະ",
+      "ລາຍງານລາຍຮັບແຍກຕາມແຂວງ ແລະ ປະເພດອາກອນ",
+    ],
+    tech: ["Dashboard Design", "Data Visualization", "SQL Server", "REST API", "E-Invoice"],
+    impact:
+      "ຫຼຸດເວລາລວບລວມລາຍງານອາກອນຈາກຫຼາຍວັນເຫຼືອພຽງບໍ່ເທົ່າໃດນາທີ ແລະ ເຫັນສະຖານະການຊຳລະໄດ້ທັນທີ",
+    stats: [{ value: "80%", label: "ເປົ້າໝາຍງົບປະມານ" }, { value: "5", label: "ແຫຼ່ງລາຍຮັບອາກອນ" }],
   },
 ];
 
